@@ -21,7 +21,7 @@ if ($argc !== 5) {
     exit();
 }
 
-$cf = new SynologyCloudflareDDNSAgent($argv[2], $argv[1], $argv[4]);
+$cf = new SynologyBunnyDDNSAgent($argv[2], $argv[1], $argv[4]);
 $cf->setDnsRecords();
 $cf->updateDnsRecords();
 
@@ -40,9 +40,9 @@ class SynologyOutput
  * Cloudflare api client
  * @link https://developers.cloudflare.com/api/
  */
-class CloudflareAPI
+class BunnyAPI
 {
-    const API_URL = 'https://api.cloudflare.com';
+    const API_URL = 'https://api.bunny.net';
     const ZONES_PER_PAGE = 50;
     private $apiKey;
 
@@ -64,7 +64,7 @@ class CloudflareAPI
     {
         $options = [
             CURLOPT_URL => self::API_URL . '/' . $path,
-            CURLOPT_HTTPHEADER => ["Authorization: Bearer $this->apiKey", "Content-Type: application/json"],
+            CURLOPT_HTTPHEADER => ["AccessKey: $this->apiKey", "Content-Type: application/json", "Accept: application/json"],
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_HEADER => false,
             CURLOPT_VERBOSE => false,
@@ -110,32 +110,31 @@ class CloudflareAPI
         return $json;
     }
 
-    /**
-     * @link https://developers.cloudflare.com/api/operations/user-api-tokens-verify-token
-     * @throws Exception
-     */
-    public function verifyToken()
-    {
-        return $this->call("GET", "client/v4/user/tokens/verify");
-    }
+    // /**
+    //  * @link https://developers.cloudflare.com/api/operations/user-api-tokens-verify-token
+    //  * @throws Exception
+    //  */
+    // public function verifyToken()
+    // {
+    //     return $this->call("GET", "client/v4/user/tokens/verify");
+    // }
 
     /**
-     * Note: getting max 50 zones see the documentation
-     * @link https://developers.cloudflare.com/api/operations/zones-get
+     * @link https://docs.bunny.net/reference/dnszonepublic_index
      * @throws Exception
      */
     public function getZones()
     {
-        return $this->call("GET", "client/v4/zones?per_page=" . self::ZONES_PER_PAGE . "&status=active");
+        return $this->call("GET", "dnszone?page=" . self::ZONES_PER_PAGE . "&perPage=1000");
     }
 
     /**
      * @link https://developers.cloudflare.com/api/operations/dns-records-for-a-zone-list-dns-records
      * @throws Exception
      */
-    public function getDnsRecords($zoneId, $type, $name)
+    public function getDnsRecords($zoneId)
     {
-        return $this->call("GET", "client/v4/zones/$zoneId/dns_records?type=$type&name=$name");
+        return $this->call("GET", "dnszone//$zoneId/dns_records");
     }
 
     /**
@@ -144,7 +143,7 @@ class CloudflareAPI
      */
     public function updateDnsRecord($zoneId, $recordId, $body)
     {
-        return $this->call("PATCH", "client/v4/zones/$zoneId/dns_records/$recordId", $body);
+        return $this->call("PATCH", "dnszone/zoneId/$zoneId/records/$recordId", $body);
     }
 }
 
@@ -212,13 +211,12 @@ class DnsRecordEntity
     public function toArray()
     {
         return [
-            'id' => $this->id,
-            'type' => $this->type,
-            'name' => $this->hostname,
-            'content' => $this->ip,
-            'zoneId' => $this->zoneId,
-            'ttl' => $this->ttl,
-            'proxied' => $this->proxied
+            'Id' => $this->id,
+            'Type' => $this->type,
+            'Name' => $this->hostname,
+            'Value' => $this->ip,
+            'Ttl' => $this->ttl,
+            'Accelerated' => $this->proxied
         ];
     }
 }
@@ -227,15 +225,15 @@ class DnsRecordEntity
  * DDNS auto update agent for Synology DSM
  * Supports multidomains and subdomains
  */
-class SynologyCloudflareDDNSAgent
+class SynologyBunnyDDNSAgent
 {
     private $ipv4, $ipv6, $dnsRecordList = [];
-    private $cloudflareAPI;
+    private $bunnyAPI;
     private $ipify;
 
     function __construct($apiKey, $hostname, $ipv4)
     {
-        $this->cloudflareAPI = new CloudflareAPI($apiKey);
+        $this->bunnyAPI = new BunnyAPI($apiKey);
         $this->ipify = new Ipify();
         $this->ipv4 = $ipv4;
 
@@ -245,13 +243,13 @@ class SynologyCloudflareDDNSAgent
             // IPv6 not available
         }
 
-        try {
-            if (!$this->isCFTokenValid()) {
-                $this->exitWithSynologyMsg(SynologyOutput::AUTH_FAILED);
-            }
-        } catch (Exception $e) {
-            $this->exitWithSynologyMsg();
-        }
+        // try {
+        //     if (!$this->isCFTokenValid()) {
+        //         $this->exitWithSynologyMsg(SynologyOutput::AUTH_FAILED);
+        //     }
+        // } catch (Exception $e) {
+        //     $this->exitWithSynologyMsg();
+        // }
 
         $hostnameList = $this->extractHostnames($hostname);
         if (empty($hostnameList)) {
@@ -278,13 +276,21 @@ class SynologyCloudflareDDNSAgent
 
         try {
             foreach ($this->dnsRecordList as $key => $dnsRecord) {
-                $json = $this->cloudflareAPI->getDnsRecords($dnsRecord->zoneId, $dnsRecord->type, $dnsRecord->hostname);
-                if (isset($json['result']['0'])) {
-                    // If the DNS record exists, update its ID, TTL, and proxied status
-                    $this->dnsRecordList[$key]->id = $json['result']['0']['id'];
-                    $this->dnsRecordList[$key]->ttl = $json['result']['0']['ttl'];
-                    $this->dnsRecordList[$key]->proxied = $json['result']['0']['proxied'];
-                } else {
+                $json = $this->bunnyAPI->getDnsRecords($dnsRecord->zoneId);
+
+                $exist = false;
+                foreach ($json['Records'] as $record) {
+                    if ($record['Name'] == $dnsRecord->name && $record['Type'] == $dnsRecord->type) {
+                        // If the DNS record exists, update its ID, TTL, and proxied status
+                        $this->dnsRecordList[$key]->id = $record['Id'];
+                        $this->dnsRecordList[$key]->ttl = $record['Ttl'];
+                        $this->dnsRecordList[$key]->proxied = $record['Accelerated'];
+                        $exist = true;
+                        break;
+                    }
+                }
+
+                if (!$exist) {
                     // If the DNS record does not exist, remove it from the list
                     unset($this->dnsRecordList[$key]);
                 }
@@ -309,7 +315,7 @@ class SynologyCloudflareDDNSAgent
         }
         foreach ($this->dnsRecordList as $dnsRecord) {
             try {
-               $this->cloudflareAPI->updateDnsRecord($dnsRecord->zoneId, $dnsRecord->id, $dnsRecord->toArray());
+                $this->bunnyAPI->updateDnsRecord($dnsRecord->zoneId, $dnsRecord->id, $dnsRecord->toArray());
             } catch (Exception $e) {
                 $this->exitWithSynologyMsg(SynologyOutput::BAD_HTTP_REQUEST);
             }
@@ -332,17 +338,17 @@ class SynologyCloudflareDDNSAgent
     private function matchHostnameWithZone($hostnameList = [])
     {
         try {
-            $zoneList = $this->cloudflareAPI->getZones();
-            $zoneList = $zoneList['result'];
+            $zoneList = $this->bunnyAPI->getZones();
+            $zoneList = $zoneList['Items'];
             foreach ($zoneList as $zone) {
-                $zoneId = $zone['id'];
-                $zoneName = $zone['name'];
+                $zoneId = $zone['Id'];
+                $zoneName = $zone['Domain'];
                 foreach ($hostnameList as $hostname) {
                     if (strpos($hostname, $zoneName) !== false) {
                         // Add an IPv4 DNS record for each hostname that matches a zone
                         $this->dnsRecordList[] = new DnsRecordEntity(
                             '',
-                            'A',
+                            '0', // A
                             $hostname,
                             $this->ipv4,
                             $zoneId,
@@ -353,7 +359,7 @@ class SynologyCloudflareDDNSAgent
                             // Add an IPv6 DNS record if an IPv6 address is available
                             $this->dnsRecordList[] = new DnsRecordEntity(
                                 '',
-                                'AAAA',
+                                '1', // AAAA
                                 $hostname,
                                 $this->ipv6,
                                 $zoneId,
@@ -403,25 +409,25 @@ class SynologyCloudflareDDNSAgent
         return preg_match($domainPattern, $value);
     }
 
-    /**
-     * Checks CF API Token is valid
-     *
-     * This function verifies if the Cloudflare API token is valid by calling the verifyToken
-     * method of the CloudflareAPI class. If the token is valid, it returns true.
-     * If an exception occurs during the verification process, the function catches the exception
-     * and returns false, indicating that the token is not valid or an error has occurred.
-     *
-     * @return bool Returns true if the Cloudflare API token is valid, otherwise false.
-     */
-    private function isCFTokenValid()
-    {
-        try {
-            $res = $this->cloudflareAPI->verifyToken();
-            return $res['success'];
-        } catch (Exception $e) {
-            return false;
-        }
-    }
+    // /**
+    //  * Checks CF API Token is valid
+    //  *
+    //  * This function verifies if the Cloudflare API token is valid by calling the verifyToken
+    //  * method of the BunnyAPI class. If the token is valid, it returns true.
+    //  * If an exception occurs during the verification process, the function catches the exception
+    //  * and returns false, indicating that the token is not valid or an error has occurred.
+    //  *
+    //  * @return bool Returns true if the Cloudflare API token is valid, otherwise false.
+    //  */
+    // private function isCFTokenValid()
+    // {
+    //     try {
+    //         $res = $this->bunnyAPI->verifyToken();
+    //         return $res['success'];
+    //     } catch (Exception $e) {
+    //         return false;
+    //     }
+    // }
 
     /**
      * Outputs a message and exits the script.
