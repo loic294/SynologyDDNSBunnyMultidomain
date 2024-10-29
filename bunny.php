@@ -98,12 +98,16 @@ class BunnyAPI
         curl_setopt_array($req, $options);
         $res = curl_exec($req);
 
+        var_dump($res);
+
         if (curl_errno($req)) {
             throw new Exception('Curl error: ' . curl_error($req));
         }
 
         curl_close($req);
         $json = json_decode($res, true);
+
+        var_dump($json);
 
         // if (!$json['success']) {
         //     throw new Exception('API call failed');
