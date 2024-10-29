@@ -74,6 +74,10 @@ class BunnyAPI
             CURLOPT_TIMEOUT => 30,
         ];
 
+        echo "\n\n";
+        echo "REQUEST: ";
+        var_dump($options);
+
         switch ($method) {
             case "GET":
                 $options[CURLOPT_HTTPGET] = true;
@@ -98,6 +102,8 @@ class BunnyAPI
         curl_setopt_array($req, $options);
         $res = curl_exec($req);
 
+        echo "\n\n";
+        echo "Response: ";
         var_dump($res);
 
         if (curl_errno($req)) {
@@ -107,6 +113,8 @@ class BunnyAPI
         curl_close($req);
         $json = json_decode($res, true);
 
+        echo "\n\n";
+        echo "Json: ";
         var_dump($json);
 
         // if (!$json['success']) {
