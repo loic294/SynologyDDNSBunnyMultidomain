@@ -2,10 +2,10 @@
 <?php
 /**
  * Cloudflare DDNS agent for Synology DSM
- * @link https://github.com/mrikirill/SynologyDDNSCloudflareMultidomain
+ * @link https://github.com/loic294/SynologyDDNSBunnyMultidomain
  * @version 2.0
  * @license MIT
- * @author https://github.com/mrikirill
+ * @author https://github.com/loic294
  */
 
 /**
@@ -16,6 +16,8 @@
  * 3 - hostname - the script doesn't use it die to input limits
  * 4 - IPv4     - Synology provided IPv4
  */
+var_dump($argv);
+
 if ($argc !== 5) {
     echo SynologyOutput::BAD_PARAMS;
     exit();
