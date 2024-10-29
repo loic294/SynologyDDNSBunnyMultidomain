@@ -105,9 +105,9 @@ class BunnyAPI
         curl_close($req);
         $json = json_decode($res, true);
 
-        if (!$json['success']) {
-            throw new Exception('API call failed');
-        }
+        // if (!$json['success']) {
+        //     throw new Exception('API call failed');
+        // }
 
         return $json;
     }
