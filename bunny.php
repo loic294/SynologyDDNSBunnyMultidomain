@@ -45,7 +45,7 @@ class SynologyOutput
 class BunnyAPI
 {
     const API_URL = 'https://api.bunny.net';
-    const ZONES_PER_PAGE = 50;
+    const ZONES_PER_PAGE = 1000;
     private $apiKey;
 
     public function __construct($apiKey)
@@ -131,7 +131,7 @@ class BunnyAPI
      */
     public function getZones()
     {
-        return $this->call("GET", "dnszone?page=" . self::ZONES_PER_PAGE . "&perPage=1000");
+        return $this->call("GET", "dnszone?page=1&perPage=" . self::ZONES_PER_PAGE);
     }
 
     /**
