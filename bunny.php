@@ -16,7 +16,7 @@
  * 3 - hostname - the script doesn't use it die to input limits
  * 4 - IPv4     - Synology provided IPv4
  */
-var_dump($argv);
+// var_dump($argv);
 
 if ($argc !== 5) {
     echo SynologyOutput::BAD_PARAMS;
@@ -74,13 +74,13 @@ class BunnyAPI
             CURLOPT_TIMEOUT => 30,
         ];
 
-        echo "\n\n";
-        echo "REQUEST: ";
-        var_dump($options);
+        // echo "\n\n";
+        // echo "REQUEST: ";
+        // var_dump($options);
 
-        echo "\n\n";
-        echo "DATA: ";
-        var_dump($data);
+        // echo "\n\n";
+        // echo "DATA: ";
+        // var_dump($data);
 
         switch ($method) {
             case "GET":
@@ -117,9 +117,9 @@ class BunnyAPI
         curl_close($req);
         $json = json_decode($res, true);
 
-        echo "\n\n";
-        echo "Json: ";
-        var_dump($json);
+        // echo "\n\n";
+        // echo "Json: ";
+        // var_dump($json);
 
         // if (!$json['success']) {
         //     throw new Exception('API call failed');
