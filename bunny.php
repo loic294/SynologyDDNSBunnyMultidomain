@@ -148,7 +148,7 @@ class BunnyAPI
      */
     public function getDnsRecords($zoneId)
     {
-        return $this->call("GET", "dnszone/$zoneId/dns_records");
+        return $this->call("GET", "/dnszone/$zoneId");
     }
 
     /**
