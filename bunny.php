@@ -161,7 +161,7 @@ class BunnyAPI
      */
     public function updateDnsRecord($zoneId, $recordId, $body)
     {
-        return $this->call("POST", "dnszone/zoneId/$zoneId/records/$recordId", $body);
+        return $this->call("POST", "dnszone/$zoneId/records/$recordId", $body);
     }
 }
 
