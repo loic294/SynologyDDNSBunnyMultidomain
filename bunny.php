@@ -229,7 +229,7 @@ class DnsRecordEntity
     public function toArray()
     {
         return [
-            // 'Id' => $this->id,
+            'Id' => $this->id,
             'Type' => $this->type,
             'Name' => $this->hostname,
             'Value' => $this->ip,
