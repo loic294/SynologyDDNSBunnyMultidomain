@@ -78,6 +78,10 @@ class BunnyAPI
         echo "REQUEST: ";
         var_dump($options);
 
+        echo "\n\n";
+        echo "DATA: ";
+        var_dump($data);
+
         switch ($method) {
             case "GET":
                 $options[CURLOPT_HTTPGET] = true;
