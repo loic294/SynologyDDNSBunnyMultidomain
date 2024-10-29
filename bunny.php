@@ -294,7 +294,7 @@ class SynologyBunnyDDNSAgent
 
                 $exist = false;
                 foreach ($json['Records'] as $record) {
-                    if (strcmp($record['Name'], $dnsRecord->hostname) !== false && strcmp($record['Type'], $dnsRecord->type) !== false) {
+                    if (strcmp($record['Name'], $dnsRecord->hostname) !== false && $record['Type'] == $dnsRecord->type) {
                         // If the DNS record exists, update its ID, TTL, and proxied status
                         $this->dnsRecordList[$key]->id = $record['Id'];
                         $this->dnsRecordList[$key]->ttl = $record['Ttl'];
@@ -362,7 +362,7 @@ class SynologyBunnyDDNSAgent
                         // Add an IPv4 DNS record for each hostname that matches a zone
                         $this->dnsRecordList[] = new DnsRecordEntity(
                             '',
-                            '0', // A
+                            0, // A
                             $hostname,
                             $this->ipv4,
                             $zoneId,
@@ -373,7 +373,7 @@ class SynologyBunnyDDNSAgent
                             // Add an IPv6 DNS record if an IPv6 address is available
                             $this->dnsRecordList[] = new DnsRecordEntity(
                                 '',
-                                '1', // AAAA
+                                1, // AAAA
                                 $hostname,
                                 $this->ipv6,
                                 $zoneId,
