@@ -102,9 +102,9 @@ class BunnyAPI
         curl_setopt_array($req, $options);
         $res = curl_exec($req);
 
-        echo "\n\n";
-        echo "Response: ";
-        var_dump($res);
+        // echo "\n\n";
+        // echo "Response: ";
+        // var_dump($res);
 
         if (curl_errno($req)) {
             throw new Exception('Curl error: ' . curl_error($req));
@@ -294,7 +294,7 @@ class SynologyBunnyDDNSAgent
 
                 $exist = false;
                 foreach ($json['Records'] as $record) {
-                    if ($record['Name'] == $dnsRecord->name && $record['Type'] == $dnsRecord->type) {
+                    if (strcmp($record['Name'], $dnsRecord->hostname) !== false && strcmp($record['Type'], $dnsRecord->type) !== false) {
                         // If the DNS record exists, update its ID, TTL, and proxied status
                         $this->dnsRecordList[$key]->id = $record['Id'];
                         $this->dnsRecordList[$key]->ttl = $record['Ttl'];
